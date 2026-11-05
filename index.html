@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ukraine Admin Simulator</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --panel-bg: #1e293b;
+            --text-color: #f8fafc;
+            --accent-blue: #2563eb;
+            --accent-yellow: #eab308;
+            --ua-blue: #0057b7;
+            --ua-yellow: #ffd700;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Карта */
+        #map-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            position: relative;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+            max-width: 900px;
+            filter: drop-shadow(0 10px 15px rgba(0,0,0,0.5));
+        }
+
+        .region {
+            fill: #334155;
+            stroke: #0f172a;
+            stroke-width: 1.5;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .region:hover {
+            opacity: 0.8;
+            stroke: #ffffff;
+            stroke-width: 2;
+        }
+
+        /* Адмін-панель */
+        #admin-panel {
+            width: 350px;
+            background-color: var(--panel-bg);
+            border-left: 2px solid #334155;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            box-shadow: -5px 0 15px rgba(0,0,0,0.3);
+            overflow-y: auto;
+        }
+
+        .badge {
+            background: linear-gradient(90deg, var(--accent-blue), var(--accent-yellow));
+            color: #000;
+            font-weight: bold;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            text-transform: uppercase;
+            display: inline-block;
+        }
+
+        h2 {
+            font-size: 1.2rem;
+            border-bottom: 1px solid #334155;
+            padding-bottom: 8px;
+            margin-top: 10px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            font-size: 0.9rem;
+            color: #94a3b8;
+        }
+
+        select, input[type="color"], button {
+            width: 100%;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #334155;
+            background-color: #0f172a;
+            color: #fff;
+            font-size: 0.95rem;
+            outline: none;
+        }
+
+        button {
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+
+        .btn-blue {
+            background-color: var(--accent-blue);
+        }
+        .btn-blue:hover {
+            background-color: #1d4ed8;
+        }
+
+        .btn-yellow {
+            background-color: var(--accent-yellow);
+            color: #000;
+        }
+        .btn-yellow:hover {
+            background-color: #ca8a04;
+        }
+
+        .btn-danger {
+            background-color: #ef4444;
+        }
+        .btn-danger:hover {
+            background-color: #dc2626;
+        }
+
+        #selected-info {
+            background-color: #0f172a;
+            padding: 12px;
+            border-radius: 6px;
+            border-left: 4px solid var(--accent-blue);
+        }
+
+        /* Підказка над картою */
+        #tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            pointer-events: none;
+            display: none;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="map-container">
+        <!-- Спрощена SVG-карта областей України -->
+        <svg viewBox="0 0 800 500" id="ukraine-map">
+            <!-- Захід -->
+            <path id="UA-21" class="region" data-name="Закарпатська область" d="M 50 280 L 90 260 L 110 290 L 80 320 Z" />
+            <path id="UA-46" class="region" data-name="Львівська область" d="M 60 200 L 120 190 L 130 250 L 90 260 L 50 240 Z" />
+            <path id="UA-07" class="region" data-name="Волинська область" d="M 70 130 L 130 120 L 140 180 L 60 200 Z" />
+            <path id="UA-56" class="region" data-name="Рівненська область" d="M 130 120 L 200 110 L 200 180 L 140 180 Z" />
+            <path id="UA-61" class="region" data-name="Тернопільська область" d="M 130 250 L 180 240 L 170 190 L 120 190 Z" />
+            <path id="UA-26" class="region" data-name="Івано-Франківська область" d="M 110 290 L 160 280 L 180 240 L 130 250 L 90 260 Z" />
+            <path id="UA-77" class="region" data-name="Чернівецька область" d="M 160 280 L 220 270 L 210 300 L 150 300 Z" />
+
+            <!-- Північ і Центр -->
+            <path id="UA-18" class="region" data-name="Житомирська область" d="M 200 110 L 290 120 L 280 200 L 200 180 Z" />
+            <path id="UA-32" class="region" data-name="Київська область" d="M 290 120 L 370 130 L 360 220 L 280 200 Z" />
+            <path id="UA-74" class="region" data-name="Чернігівська область" d="M 370 130 L 460 110 L 440 190 L 370 190 Z" />
+            <path id="UA-59" class="region" data-name="Сумська область" d="M 460 110 L 540 130 L 500 210 L 440 190 Z" />
+            <path id="UA-71" class="region" data-name="Черкаська область" d="M 360 220 L 430 210 L 420 270 L 340 270 Z" />
+            <path id="UA-05" class="region" data-name="Вінницька область" d="M 220 270 L 340 270 L 320 330 L 240 320 Z" />
+            <path id="UA-35" class="region" data-name="Кіровоградська область" d="M 420 270 L 510 260 L 490 320 L 400 320 Z" />
+            <path id="UA-53" class="region" data-name="Полтавська область" d="M 430 210 L 530 210 L 530 280 L 420 270 Z" />
+
+            <!-- Схід -->
+            <path id="UA-63" class="region" data-name="Харківська область" d="M 530 210 L 630 200 L 620 280 L 530 280 Z" />
+            <path id="UA-09" class="region" data-name="Луганська область" d="M 630 200 L 730 210 L 710 290 L 620 280 Z" />
+            <path id="UA-14" class="region" data-name="Донецька область" d="M 620 280 L 710 290 L 680 370 L 600 350 Z" />
+            <path id="UA-12" class="region" data-name="Дніпропетровська область" d="M 510 260 L 620 280 L 600 350 L 490 320 Z" />
+
+            <!-- Південь -->
+            <path id="UA-51" class="region" data-name="Одеська область" d="M 240 320 L 380 330 L 350 430 L 260 410 Z" />
+            <path id="UA-48" class="region" data-name="Миколаївська область" d="M 380 330 L 460 330 L 440 390 L 370 380 Z" />
+            <path id="UA-65" class="region" data-name="Херсонська область" d="M 460 330 L 570 340 L 540 410 L 440 390 Z" />
+            <path id="UA-23" class="region" data-name="Запорізька область" d="M 570 340 L 680 370 L 630 420 L 540 410 Z" />
+            <path id="UA-43" class="region" data-name="АР Крим" d="M 460 410 L 560 410 L 530 480 L 460 460 Z" />
+        </svg>
+
+        <div id="tooltip"></div>
+    </div>
+
+    <!-- Адмін панель -->
+    <div id="admin-panel">
+        <div>
+            <span class="badge">God Mode Admin</span>
+            <h1 style="font-size: 1.5rem; margin-top: 5px;">Панель Управління</h1>
+        </div>
+
+        <div id="selected-info">
+            <strong>Обраний регіон:</strong>
+            <div id="region-name" style="color: var(--accent-yellow); font-size: 1.1rem; margin-top: 5px;">Клацніть на карту</div>
+        </div>
+
+        <h2>Швидка зміна</h2>
+        <div class="control-group">
+            <button class="btn-blue" onclick="setRegionColor('#0057b7')">🟦 Синій (Україна)</button>
+            <button class="btn-yellow" onclick="setRegionColor('#ffd700')">🟨 Жовтий (Україна)</button>
+            <button style="background-color: #22c55e;" onclick="setRegionColor('#22c55e')">🟩 Зелений (Союзник)</button>
+            <button class="btn-danger" onclick="setRegionColor('#ef4444')">🟥 Червоний (Ворог)</button>
+        </div>
+
+        <h2>Свій колір</h2>
+        <div class="control-group">
+            <label>Виберіть будь-який колір:</label>
+            <input type="color" id="custom-color" value="#8b5cf6" onchange="applyCustomColor(this.value)">
+        </div>
+
+        <h2>Масові дії (Адмін)</h2>
+        <div class="control-group">
+            <button class="btn-blue" onclick="fillAll('#0057b7')">Зафарбувати Все в Синій</button>
+            <button class="btn-yellow" onclick="fillAll('#ffd700')">Зафарбувати Все в Жовтий</button>
+            <button class="btn-danger" onclick="resetMap()">Скинути карту</button>
+        </div>
+    </div>
+
+    <script>
+        let selectedRegion = null;
+        const tooltip = document.getElementById('tooltip');
+
+        // Вибір регіону при кліку
+        document.querySelectorAll('.region').forEach(region => {
+            region.addEventListener('click', function() {
+                selectedRegion = this;
+                document.getElementById('region-name').innerText = this.getAttribute('data-name');
+            });
+
+            // Підказка при наведенні
+            region.addEventListener('mousemove', function(e) {
+                tooltip.style.display = 'block';
+                tooltip.style.left = e.pageX + 10 + 'px';
+                tooltip.style.top = e.pageY + 10 + 'px';
+                tooltip.innerText = this.getAttribute('data-name');
+            });
+
+            region.addEventListener('mouseleave', function() {
+                tooltip.style.display = 'none';
+            });
+        });
+
+        // Функція зміни кольору обраної області
+        function setRegionColor(color) {
+            if (selectedRegion) {
+                selectedRegion.style.fill = color;
+            } else {
+                alert('Спочатку виберіть область на карті!');
+            }
+        }
+
+        // Застосування кольору з палітри
+        function applyCustomColor(color) {
+            setRegionColor(color);
+        }
+
+        // Зафарбувати всі області
+        function fillAll(color) {
+            document.querySelectorAll('.region').forEach(region => {
+                region.style.fill = color;
+            });
+        }
+
+        // Скинути до початкового кольору
+        function resetMap() {
+            document.querySelectorAll('.region').forEach(region => {
+                region.style.fill = '#334155';
+            });
+        }
+    </script>
+</body>
+</html>
